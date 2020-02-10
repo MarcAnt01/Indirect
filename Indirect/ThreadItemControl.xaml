@@ -1,0 +1,368 @@
+﻿<UserControl
+    x:Class="Indirect.ThreadItemControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Indirect"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:Microsoft.Toolkit.Uwp.UI.Controls"
+    xmlns:core="using:FluiFramework.UWP.Core" 
+    xmlns:utils="using:Indirect.Utilities"
+    xmlns:converters="using:Indirect.Converters"
+    xmlns:wrappers="using:Indirect.Wrapper"
+    mc:Ignorable="d"
+    d:DesignHeight="300"
+    d:DesignWidth="400">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="FromThemItemBackground" Color="{StaticResource SystemBaseLowColor}"></SolidColorBrush>
+                    <SolidColorBrush x:Key="FromMeItemBackground" Color="{ThemeResource SystemAccentColorDark1}"></SolidColorBrush>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="FromThemItemBackground" Color="{StaticResource SystemBaseLowColor}"></SolidColorBrush>
+                    <SolidColorBrush x:Key="FromMeItemBackground" Color="{ThemeResource SystemAccentColorLight1}"></SolidColorBrush>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <converters:LikeUnlikeStyleConverter x:Key="LikeUnlikeStyleConverter">
+                <converters:LikeUnlikeStyleConverter.LikeStyle>
+                    <Style x:Name="LikeMenuStyle" TargetType="MenuFlyoutItem">
+                        <Setter Property="Text" Value="Like"/>
+                        <Setter Property="Icon">
+                            <Setter.Value>
+                                <FontIcon Glyph="&#xEB52;"/>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </converters:LikeUnlikeStyleConverter.LikeStyle>
+                <converters:LikeUnlikeStyleConverter.UnlikeStyle>
+                    <Style x:Name="UnlikeMenuStyle" TargetType="MenuFlyoutItem">
+                        <Setter Property="Text" Value="Unlike"/>
+                        <Setter Property="Icon">
+                            <Setter.Value>
+                                <FontIcon Glyph="&#xEB51;"/>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </converters:LikeUnlikeStyleConverter.UnlikeStyle>
+            </converters:LikeUnlikeStyleConverter>
+
+            <converters:NullVisibilityConverter x:Key="NullVisibilityConverter"/>
+            <converters:LinkPreviewVisibilityConverter x:Key="LinkPreviewVisibilityConverter"/>
+            <converters:FromMeBoolToGridColumnConverter x:Key="FromMeBoolToGridColumnConverter"/>
+            <converters:ReactionsFromMeConverter x:Key="ReactionsFromMeConverter"
+                                                 FromMe="{StaticResource FromMeReaction}"
+                                                 FromThem="{StaticResource FromThemReaction}"/>
+            <converters:ReactionsVisibilityConverter x:Key="ReactionsVisibilityConverter"/>
+            <converters:ReactionTextVisibilityConverter x:Key="ReactionTextVisibilityConverter"/>
+            <converters:FromMeBoolToAlignmentConverter x:Key="FromMeAlignmentConverter"/>
+            <converters:ReelShareTextVisibilityConverter x:Key="ReelShareTextVisibilityConverter"/>
+            <converters:FromMeBoolToBrushConverter x:Key="FromMeBrushConverter" 
+                                                   FromMe="{StaticResource FromMeItemBackground}"
+                                                   FromThem="{StaticResource FromThemItemBackground}"/>
+            <converters:OpenButtonStyleConverter x:Key="OpenButtonStyleConverter" 
+                                                 AvailableStyle="{StaticResource AvailableOpen}"
+                                                 NotAvailableStyle="{StaticResource NotAvailableOpen}"/>
+            <converters:VariableMaxWidthConverter x:Key="VariableMaxWidthConverter"/>
+
+
+            <Style x:Name="FromMeReaction" TargetType="FontIcon">
+                <Setter Property="Glyph" Value="&#xEB52;"/>
+                <Setter Property="Foreground" Value="Crimson"/>
+            </Style>
+            <Style x:Name="FromThemReaction" TargetType="FontIcon">
+                <Setter Property="Glyph" Value="&#xEB51;"/>
+            </Style>
+
+            <Style x:Name="AvailableOpen" BasedOn="{StaticResource ButtonRevealStyle}" TargetType="Button">
+                <Setter Property="Content" Value="📷 Photo"/>
+                <Setter Property="Background" Value="{StaticResource FromMeItemBackground}"/>
+                <Setter Property="IsEnabled" Value="True"/>
+            </Style>
+            <Style x:Name="NotAvailableOpen" BasedOn="{StaticResource ButtonRevealStyle}" TargetType="Button">
+                <Setter Property="Content" Value="Expired"/>
+                <Setter Property="Foreground" Value="{StaticResource SystemBaseMediumColor}"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="IsEnabled" Value="False"/>
+            </Style>
+
+            <DataTemplate x:Key="UnexpectedTemplate" x:DataType="wrappers:InstaDirectInboxItemWrapper">
+                <Border Background="Transparent" 
+                        ToolTipService.ToolTip="This item type is something I has not encountered during development and is totally unaccounted for.
+                        It would be nice if you can provide me some context regarding this item so I can support this item in the future."
+                        HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
+                        CornerRadius="2" BorderBrush="{StaticResource SystemControlForegroundBaseMediumBrush}" BorderThickness="1" >
+                    <TextBlock Style="{ThemeResource FluentCaptionTextStyle}"
+                               Foreground="{StaticResource SystemControlForegroundBaseMediumBrush}"
+                               Text="Unexpected item type. Contact the developer."
+                               Margin="6" 
+                               MaxWidth="250"
+                               HorizontalAlignment="Center" 
+                               TextWrapping="WrapWholeWords" FontStyle="Italic"/>
+                </Border>
+            </DataTemplate>
+
+            <DataTemplate x:Key="NotSupportedTemplate" x:DataType="wrappers:InstaDirectInboxItemWrapper">
+                <Border x:Name="NotAvailableMessage" 
+                        Background="Transparent" 
+                        HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
+                        CornerRadius="2" BorderBrush="{StaticResource SystemControlForegroundBaseMediumBrush}" BorderThickness="1">
+                    <TextBlock Style="{ThemeResource FluentCaptionTextStyle}"
+                               Foreground="{StaticResource SystemControlForegroundBaseMediumBrush}"
+                               Text="Content type is not yet supported."
+                               Margin="6" 
+                               MaxWidth="250"
+                               HorizontalAlignment="Center" 
+                               TextWrapping="WrapWholeWords" FontStyle="Italic"/>
+                </Border>
+            </DataTemplate>
+
+            <DataTemplate x:Key="HiddenMediaTemplate" x:DataType="wrappers:InstaDirectInboxItemWrapper">
+                <Button x:Name="OpenMediaButton"
+                        ToolTipService.ToolTip="Open media in immersive view"
+                        HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
+                        Style="{x:Bind VisualMedia.IsExpired, Converter={StaticResource OpenButtonStyleConverter}}"
+                        CornerRadius="2" Click="OpenMediaButton_OnClick"/>
+            </DataTemplate>
+
+            <DataTemplate x:Key="LikeTemplate" x:DataType="wrappers:InstaDirectInboxItemWrapper">
+                <TextBlock x:Name="MessageContentNoBorder" 
+                           Style="{ThemeResource FluentBodyTextStyle}"
+                           Text="{x:Bind Text}"
+                           FontSize="24"
+                           MaxWidth="250"
+                           HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
+                           TextWrapping="WrapWholeWords"/>
+            </DataTemplate>
+
+            <DataTemplate x:Key="TextTemplate" x:DataType="wrappers:InstaDirectInboxItemWrapper">
+                <Border x:Name="MessageContentWithBorder"
+                        Background="{x:Bind FromMe, Converter={StaticResource FromMeBrushConverter}}"
+                        HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
+                        CornerRadius="2,2,2,2">
+                    <TextBlock Style="{ThemeResource FluentBodyTextStyle}"
+                               Text="{x:Bind Text}"
+                               Margin="6"
+                               MaxWidth="{x:Bind Text.Length, Converter={StaticResource VariableMaxWidthConverter}, FallbackValue=250}"
+                               HorizontalAlignment="Center"
+                               TextWrapping="WrapWholeWords"/>
+                </Border>
+            </DataTemplate>
+
+            <DataTemplate x:Key="HyperlinkTemplate" x:DataType="wrappers:InstaDirectInboxItemWrapper">
+                <Border x:Name="HyperlinkContent" 
+                        MaxWidth="250"
+                        Background="{x:Bind FromMe, Converter={StaticResource FromMeBrushConverter}}" 
+                        HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
+                        CornerRadius="2,2,2,2" Padding="6,0,6,0">
+                    <HyperlinkButton Content="{x:Bind Text}" NavigateUri="{x:Bind NavigateUri}" Foreground="{StaticResource SystemControlForegroundBaseHighBrush}"/>
+                </Border>
+            </DataTemplate>
+
+            <DataTemplate x:Key="HyperlinkWithPreviewTemplate" x:DataType="wrappers:InstaDirectInboxItemWrapper">
+                <StackPanel Orientation="Vertical">
+                    <Border x:Name="HyperlinkContent" 
+                            MaxWidth="250"
+                            Background="{x:Bind FromMe, Converter={StaticResource FromMeBrushConverter}}" 
+                            HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
+                            CornerRadius="2,2,2,2" Padding="6,0,6,0">
+                        <HyperlinkButton Content="{x:Bind Text}" NavigateUri="{x:Bind NavigateUri}" Foreground="{StaticResource SystemControlForegroundBaseHighBrush}"/>
+                    </Border>
+
+                    <Border x:Name="HyperlinkPreview" Visibility="{x:Bind IsNavigateUriValid, Converter={StaticResource LinkPreviewVisibilityConverter}}"
+                            Background="Transparent" 
+                            MaxWidth="250"
+                            HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
+                            CornerRadius="2" Padding="8,6,8,6" Tapped="OpenWebLink"
+                            BorderBrush="{StaticResource SystemControlForegroundBaseMediumBrush}" BorderThickness="1" >
+                        <StackPanel Orientation="Vertical">
+                            <controls:ImageEx Source="{x:Bind LinkMedia.LinkContext.LinkImageUrl}" IsCacheEnabled="False" 
+                                              Margin="-8,-6,-8,8" 
+                                              CornerRadius="0"/>
+                            <TextBlock Text="{x:Bind LinkMedia.LinkContext.LinkTitle}" Style="{ThemeResource FluentBaseTextStyle}"/>
+                            <NavigationViewItemSeparator/>
+                            <TextBlock Text="{x:Bind LinkMedia.LinkContext.LinkSummary}" 
+                                       Style="{ThemeResource FluentCaptionTextStyle}"
+                                       Foreground="{StaticResource SystemControlForegroundBaseMediumBrush}" TextWrapping="WrapWholeWords"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </DataTemplate>
+
+            <DataTemplate x:Key="ImageTemplate" x:DataType="wrappers:InstaDirectInboxItemWrapper">
+                <controls:ImageEx x:Name="ImageFrame"
+                                  MaxWidth="250" MaxHeight="350"
+                                  IsCacheEnabled="True"
+                                  CornerRadius="2"
+                                  BorderBrush="{StaticResource SystemControlForegroundBaseMediumBrush}"
+                                  BorderThickness="1"
+                                  Source="{x:Bind PreviewImageUri}"
+                                  HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
+                                  Tapped="ImageFrame_Tapped"/>
+            </DataTemplate>
+
+            <DataTemplate x:Key="VideoTemplate" x:DataType="wrappers:InstaDirectInboxItemWrapper">
+                <Grid x:Name="VideoView"
+                      HorizontalAlignment="{x:Bind FromMe, Mode=OneTime, Converter={StaticResource FromMeAlignmentConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button x:Name="VideoPopupButton" Canvas.ZIndex="2"
+                            Grid.Column="{x:Bind FromMe, Converter={StaticResource FromMeBoolToGridColumnConverter}, FallbackValue=0}"
+                            Style="{StaticResource ButtonRevealStyle}"
+                            Background="Transparent"
+                            Margin="8"
+                            ToolTipService.ToolTip="Open video in immersive view"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" Tapped="VideoPopupButton_OnTapped">
+                        <SymbolIcon Symbol="NewWindow"/>
+                    </Button>
+
+                    <Border Grid.Column="1"
+                            CornerRadius="2"
+                            BorderBrush="{StaticResource SystemControlForegroundBaseMediumBrush}"
+                            BorderThickness="1">
+                        <local:AutoVideoControl x:Name="MediaFrame"
+                                                MaxWidth="250" MaxHeight="350" 
+                                                VideoHeight="{x:Bind VideoHeight}" VideoWidth="{x:Bind VideoWidth}"
+                                                Source="{x:Bind VideoUri}" PosterSource="{x:Bind PreviewImageUri}">
+                            <local:AutoVideoControl.TransportControls>
+                                <MediaTransportControls IsFullWindowEnabled="False" IsFullWindowButtonVisible="False"
+                                                        IsZoomButtonVisible="False" ShowAndHideAutomatically="False"/>
+                            </local:AutoVideoControl.TransportControls>
+                        </local:AutoVideoControl>
+                    </Border>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Name="MediaShareTemplate" x:DataType="wrappers:InstaDirectInboxItemWrapper">
+                <Grid x:Name="MediaShareView"
+                      CornerRadius="2" Tapped="OpenWebLink"
+                      Background="{x:Bind FromMe, Converter={StaticResource FromMeBrushConverter}}" 
+                      MaxWidth="250" MaxHeight="350"
+                      HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8,6,8,6">
+                        <PersonPicture ProfilePicture="{x:Bind MediaShare.User.ProfilePictureUrl}" Height="24" Width="24" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind MediaShare.User.UserName}" 
+                                   Style="{ThemeResource FluentBaseTextStyle}"
+                                   MaxLines="1" 
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <controls:ImageEx x:Name="MediaShareImageFrame" Grid.Row="1" 
+                                      Source="{x:Bind PreviewImageUri}"
+                                      HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Stretch"/>
+                    <TextBlock Grid.Row="2" 
+                               Style="{ThemeResource FluentCaptionTextStyle}"
+                               Text="{x:Bind MediaShare.Caption.Text}" 
+                               TextWrapping="WrapWholeWords"
+                               Margin="8,4,8,8"/>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="ReelShareTemplate" x:DataType="wrappers:InstaDirectInboxItemWrapper">
+                <StackPanel Orientation="Vertical" 
+                            HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}">
+                    <TextBlock Text="{x:Bind Text}"
+                               Style="{ThemeResource FluentCaptionTextStyle}"
+                               Foreground="{StaticResource SystemControlForegroundBaseMediumBrush}"
+                               HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
+                               Margin="0,0,0,2"/>
+                    <controls:ImageEx Source="{x:Bind PreviewImageUri}"
+                                      Visibility="{Binding RelativeSource={RelativeSource Self}, Path=Source, Converter={StaticResource NullVisibilityConverter}}"
+                                      MaxWidth="100" Height="200" Stretch="UniformToFill"
+                                      HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
+                                      CornerRadius="2" Tapped="ReelShareImage_Tapped"/>
+                    <Border x:Name="MessageContentWithBorder"
+                            Visibility="{x:Bind ReelShareMedia.Type, Converter={StaticResource ReelShareTextVisibilityConverter}}"
+                            Background="{x:Bind FromMe, Converter={StaticResource FromMeBrushConverter}}"
+                            HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
+                            CornerRadius="2,2,2,2">
+                        <TextBlock Style="{ThemeResource FluentBodyTextStyle}"
+                                   Text="{x:Bind ReelShareMedia.Text}"
+                                   Margin="6"
+                                   MaxWidth="250"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="WrapWholeWords"/>
+                    </Border>
+                </StackPanel>
+            </DataTemplate>
+
+            <DataTemplate x:Key="AudioTemplate" x:DataType="wrappers:InstaDirectInboxItemWrapper">
+                <Border CornerRadius="2"
+                        HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
+                        BorderBrush="{StaticResource SystemControlForegroundBaseMediumBrush}"
+                        BorderThickness="1">
+                    <local:AutoVideoControl Width="250" Source="{x:Bind VideoUri}">
+                        <local:AutoVideoControl.TransportControls>
+                            <MediaTransportControls IsFullWindowEnabled="False" IsFullWindowButtonVisible="False"
+                                                    IsZoomButtonVisible="False" ShowAndHideAutomatically="False"
+                                                    IsCompact="True"/>
+                        </local:AutoVideoControl.TransportControls>
+                    </local:AutoVideoControl>
+                </Border>
+            </DataTemplate>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+
+    <StackPanel x:Name="ItemContainer" Orientation="Vertical" 
+                HorizontalAlignment="{x:Bind Item.FromMe, Mode=OneWay, Converter={StaticResource FromMeAlignmentConverter}}"
+                Margin="0,2,0,2" DoubleTapped="ShowTimestamp">
+
+        <ContentControl x:Name="MainContentControl" Content="{x:Bind Item, Mode=OneWay}" 
+                        HorizontalAlignment="{x:Bind Item.FromMe, Mode=OneWay, Converter={StaticResource FromMeAlignmentConverter}}">
+            <ContentControl.ContextFlyout>
+                <MenuFlyout x:Name="ItemContextMenu">
+                    <MenuFlyoutItem Style="{x:Bind Item.Reactions.MeLiked, Mode=OneWay, Converter={StaticResource LikeUnlikeStyleConverter}}"
+                                    Click="LikeUnlike_Click"/>
+                    <MenuFlyoutItem x:Name="MenuCopyOption" Visibility="Collapsed" Text="Copy" Click="MenuCopyOption_Click">
+                        <MenuFlyoutItem.Icon>
+                            <SymbolIcon Symbol="Copy"/>
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                </MenuFlyout>
+            </ContentControl.ContextFlyout>
+            <ContentControl.ContentTemplateSelector>
+                <local:ItemTemplateSelector TextTemplate="{StaticResource TextTemplate}"
+                                            LikeTemplate="{StaticResource LikeTemplate}"
+                                            HyperlinkTemplate="{StaticResource HyperlinkTemplate}"
+                                            HyperlinkWithPreviewTemplate="{StaticResource HyperlinkWithPreviewTemplate}"
+                                            NotSupportedTemplate="{StaticResource NotSupportedTemplate}"
+                                            HiddenMediaTemplate="{StaticResource HiddenMediaTemplate}"
+                                            ImageTemplate="{StaticResource ImageTemplate}"
+                                            VideoTemplate="{StaticResource VideoTemplate}"
+                                            AudioTemplate="{StaticResource AudioTemplate}"
+                                            MediaShareTemplate="{StaticResource MediaShareTemplate}"
+                                            ReelShareTemplate="{StaticResource ReelShareTemplate}"
+                                            UnexpectedTemplate="{StaticResource UnexpectedTemplate}"/>
+            </ContentControl.ContentTemplateSelector>
+        </ContentControl>
+
+        <StackPanel x:Name="Reactions" Orientation="Horizontal" Margin="8,2,8,0"
+                    HorizontalAlignment="Left"
+                    Visibility="{x:Bind Item.Reactions.LikesCount, Mode=OneWay, Converter={StaticResource ReactionsVisibilityConverter}, FallbackValue=Collapsed}">
+            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" FontSize="12"
+                    Style="{x:Bind Item.Reactions.MeLiked, Mode=OneWay, Converter={StaticResource ReactionsFromMeConverter}}"/>
+            <TextBlock Text="{x:Bind Item.Reactions.LikesCount, Mode=OneWay}" Margin="2,0,0,0"
+                       Visibility="{x:Bind Item.Reactions.LikesCount, Mode=OneWay, Converter={StaticResource ReactionTextVisibilityConverter}}"
+                       Style="{ThemeResource FluentCaptionTextStyle}"/>
+        </StackPanel>
+        <TextBlock x:Name="Timestamp"
+                   Style="{ThemeResource FluentCaptionTextStyle}"
+                   Text="{x:Bind Item.TimeStamp, Mode=OneWay}" 
+                   Foreground="{StaticResource SystemControlForegroundBaseMediumBrush}"
+                   Margin="2"
+                   HorizontalAlignment="{x:Bind Item.FromMe, Mode=OneWay, Converter={StaticResource FromMeAlignmentConverter}}"
+                   Visibility="Collapsed" />
+    </StackPanel>
+</UserControl>
