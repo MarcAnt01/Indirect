@@ -15,6 +15,7 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <converters:SendButtonGlyphConverter x:Key="SendButtonGlyphConverter"/>
+            <converters:VisibleWhenZeroConverter x:Key="VisibleWhenZeroConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -23,6 +24,7 @@
             <RowDefinition Height="32"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -45,8 +47,7 @@
             <AppBarButton Icon="Refresh" Label="Refresh" Click="RefreshThread_OnClick"/>
             <CommandBar.Content>
                 <StackPanel Orientation="Horizontal" Background="Transparent">
-                    <controls:ImageEx Source="{x:Bind Thread.Users[0].ProfilePictureUrl, Mode=OneWay}" PlaceholderSource="Assets/ProfilePicturePlaceholder.jpg"
-                                      CornerRadius="99" Height="32" Width="32" Margin="12,0,16,0" VerticalAlignment="Center"/>
+                    <local:ProfilePicture Source="{x:Bind Thread.Users, Mode=OneWay}" Height="32" Width="32" Margin="12,0,16,0" VerticalAlignment="Center"/>
                     <TextBlock Text="{x:Bind Thread.Title, Mode=OneWay}" 
                                Style="{ThemeResource FluentTitleTextStyle}"
                                MaxLines="1" 
@@ -62,7 +63,7 @@
                             SelectionMode="None">
             <ListView.Header>
                 <!-- Title bar height + command bar height = 32 + 48 = 80 -->
-                <Border Height="80"/>
+                <Frame Height="80"/>
             </ListView.Header>
             <ListView.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -84,7 +85,11 @@
             </ListView.ItemTemplate>
         </utilities:ChatListView>
 
-        <Grid x:Name="MessageInputGrid" Grid.Row="3" HorizontalAlignment="Stretch" Margin="0,2,0,2">
+        <Frame Grid.Row="3" HorizontalAlignment="Center" Visibility="{x:Bind Thread.ObservableItems.Count, Converter={StaticResource VisibleWhenZeroConverter}, Mode=OneWay}">
+            <TextBlock Margin="0,0,0,16" Text="Send your first message to start chatting" Foreground="{StaticResource SystemControlForegroundBaseMediumBrush}"/>
+        </Frame>
+
+        <Grid x:Name="MessageInputGrid" Grid.Row="4" HorizontalAlignment="Stretch" Margin="0,2,0,2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="44"/>
                 <ColumnDefinition Width="*"/>

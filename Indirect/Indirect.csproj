@@ -132,6 +132,12 @@
     <Compile Include="AboutDialog.xaml.cs">
       <DependentUpon>AboutDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Converters\HumanizedDateTimeConverter.cs" />
+    <Compile Include="Converters\ReelShareImageMarginConverter.cs" />
+    <Compile Include="Converters\VisibleWhenZeroConverter.cs" />
+    <Compile Include="ProfilePicture.xaml.cs">
+      <DependentUpon>ProfilePicture.xaml</DependentUpon>
+    </Compile>
     <Compile Include="SECRETS.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
@@ -141,7 +147,7 @@
       <DependentUpon>AutoVideoControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Converters\LikeUnlikeStyleConverter.cs" />
-    <Compile Include="Converters\LinkPreviewVisibilityConverter.cs" />
+    <Compile Include="Converters\BooleanVisibilityConverter.cs" />
     <Compile Include="Converters\NullVisibilityConverter.cs" />
     <Compile Include="Converters\ReelShareTextVisibilityConverter.cs" />
     <Compile Include="Converters\VariableMaxWidthConverter.cs" />
@@ -194,6 +200,7 @@
     <Content Include="Assets\BadgeLogo.scale-150.png" />
     <Content Include="Assets\BadgeLogo.scale-200.png" />
     <Content Include="Assets\BadgeLogo.scale-400.png" />
+    <Content Include="Assets\facebook-logo.svg" />
     <Content Include="Assets\LargeTile.scale-100.png" />
     <Content Include="Assets\LargeTile.scale-125.png" />
     <Content Include="Assets\LargeTile.scale-150.png" />
@@ -271,6 +278,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="ProfilePicture.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="ThreadDetailsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -307,7 +318,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
-      <Version>6.2.9</Version>
+      <Version>6.2.10</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Toolkit.Uwp">
       <Version>6.0.0</Version>

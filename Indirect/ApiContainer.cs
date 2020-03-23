@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.Core;
+using Windows.Foundation;
 using Windows.Storage;
 using Windows.Storage.FileProperties;
 using Windows.Storage.Streams;
 using Windows.UI.Core;
+using Windows.UI.Xaml;
+using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Media.Imaging;
 using Indirect.Utilities;
 using Indirect.Wrapper;
@@ -44,8 +46,6 @@ namespace Indirect
         }
 
         private ApiContainer() { }
-
-        // Todo: handle exceptions thrown by _instaApi like no network connection
 
         private readonly Instagram _instaApi = Instagram.Instance;
         private DateTimeOffset _lastUpdated = DateTimeOffset.Now;
@@ -82,7 +82,20 @@ namespace Indirect
             if (!_instaApi.IsUserAuthenticated) throw new Exception("User is not logged in.");
             _instaApi.SyncClient.MessageReceived += OnMessageSyncReceived;
             Inbox = new InstaDirectInboxWrapper(_instaApi);
-            Inbox.FirstUpdated += (seqId, snapshotAt) => _instaApi.SyncClient.Start(seqId, snapshotAt);
+            Inbox.FirstUpdated += async (seqId, snapshotAt) =>
+            {
+                try
+                {
+                    await _instaApi.SyncClient.Start(seqId, snapshotAt).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+#if !DEBUG
+                    Crashes.TrackError(e);
+#endif
+                    await HandleException();
+                }
+            };
             await UpdateLoggedInUser();
             PushClient.Start();
             PushClient.MessageReceived += (sender, args) =>
@@ -98,6 +111,9 @@ namespace Indirect
         }
 
         public Task<Result<LoginResult>> Login(string username, string password) => _instaApi.LoginAsync(username, password);
+
+        public Task<Result<LoginResult>> LoginWithFacebook(string fbAccessToken) =>
+            _instaApi.LoginWithFacebookAsync(fbAccessToken);
 
         public void Logout()
         {
@@ -122,8 +138,10 @@ namespace Indirect
                 var itemData = data[0].Data[0];
                 var segments = itemData.Path.Trim('/').Split('/');
                 var threadId = segments[2];
+                if (string.IsNullOrEmpty(threadId)) return;
                 var thread = InboxThreads.SingleOrDefault(wrapper => wrapper.ThreadId == threadId);
                 if (thread == null) return;
+
                 if (itemData.Op == "add" && thread.ObservableItems.Count > 0)
                 {
                     await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
@@ -133,19 +151,27 @@ namespace Indirect
 
                 if (itemData.Op == "replace")
                 {
-                    // todo: Handle items seen
-                    if (itemData.Path.Contains("has_seen", StringComparison.Ordinal)) return;
-                    var incomingItem = itemData.Item;
-                    var item = thread.ObservableItems.SingleOrDefault(x => x.ItemId == incomingItem.ItemId);
+                    var item = thread.ObservableItems.SingleOrDefault(x => x.ItemId == itemData.Item.ItemId);
+                    if (item == null) return;
+                    if (itemData.Path.Contains("has_seen", StringComparison.Ordinal))
+                    {
+                        // todo: handle seen event
+                        // var args = itemData.Path.Split('/');
+                        // if (long.TryParse(args[args.Length - 1], out var userId))
+                        // {
+                        // }
+                        return;
+                    }
+
                     await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                     {
-                        if (incomingItem.Reactions == null)
+                        if (itemData.Item.Reactions == null)
                         {
-                            item?.Reactions.Clear();
+                            item.Reactions.Clear();
                         }
                         else
                         {
-                            item?.Reactions?.Update(new InstaDirectReactionsWrapper(incomingItem.Reactions, thread.ViewerId),
+                            item.Reactions?.Update(new InstaDirectReactionsWrapper(itemData.Item.Reactions, thread.ViewerId),
                                 thread.Users);
                         }
                     });
@@ -185,10 +211,17 @@ namespace Indirect
 
         public async void SendLike()
         {
-            var selectedThread = SelectedThread;
-            if (string.IsNullOrEmpty(selectedThread.ThreadId)) return;
-            var result = await _instaApi.SendLikeAsync(selectedThread.ThreadId);
-            if (result.IsSucceeded) UpdateInboxAndSelectedThread();
+            try
+            {
+                var selectedThread = SelectedThread;
+                if (string.IsNullOrEmpty(selectedThread.ThreadId)) return;
+                var result = await _instaApi.SendLikeAsync(selectedThread.ThreadId);
+                if (result.IsSucceeded) UpdateInboxAndSelectedThread();
+            }
+            catch (Exception)
+            {
+                await HandleException("Failed to send like");
+            }
         }
 
         // Send message to the current selected recipient
@@ -205,27 +238,35 @@ namespace Indirect
                 x.StartsWith("www.", StringComparison.InvariantCultureIgnoreCase)).ToList();
             Result<List<DirectThread>> result;
             Result<ItemAckPayloadResponse> ackResult;   // for links and hashtags
-            if (!string.IsNullOrEmpty(selectedThread.ThreadId))
+            try
             {
-                if (links.Any())
+                if (!string.IsNullOrEmpty(selectedThread.ThreadId))
                 {
-                    ackResult = await _instaApi.SendLinkAsync(content, links, selectedThread.ThreadId);
-                    return;
-                }
+                    if (links.Any())
+                    {
+                        ackResult = await _instaApi.SendLinkAsync(content, links, selectedThread.ThreadId);
+                        return;
+                    }
 
-                result = await _instaApi.SendTextAsync(null, selectedThread.ThreadId, content);
+                    result = await _instaApi.SendTextAsync(null, selectedThread.ThreadId, content);
+                }
+                else
+                {
+                    if (links.Any())
+                    {
+                        ackResult = await _instaApi.SendLinkToRecipientsAsync(content, links,
+                            selectedThread.Users.Select(x => x.Pk).ToArray());
+                        return;
+                    }
+
+                    result = await _instaApi.SendTextAsync(selectedThread.Users.Select(x => x.Pk),
+                        null, content);
+                }
             }
-            else
+            catch (Exception)
             {
-                if (links.Any())
-                {
-                    ackResult = await _instaApi.SendLinkToRecipientsAsync(content, links,
-                        selectedThread.Users.Select(x => x.Pk).ToArray());
-                    return;
-                }
-
-                result = await _instaApi.SendTextAsync(selectedThread.Users.Select(x => x.Pk),
-                    null, content);
+                await HandleException("Failed to send message");
+                return;
             }
             
             if (result.IsSucceeded && result.Value.Count > 0)
@@ -369,7 +410,7 @@ namespace Indirect
             var decoratedList = list.Select(x =>
             {
                 if (x.LastPermanentItem == null) x.LastPermanentItem = new DirectItem();
-                x.LastPermanentItem.Text = x.Users.Count == 1 ? x.Users[0].FullName : $"{x.Users.Count} participants";
+                x.LastPermanentItem.Text = x.Users.Count == 1 ? x.Users?[0].FullName : $"{x.Users.Count} participants";
                 return x;
             }).ToList();
             updateAction?.Invoke(decoratedList);
@@ -384,7 +425,7 @@ namespace Indirect
                 var result = await _instaApi.GetThreadByParticipantsAsync(userIds);
                 if (!result.IsSucceeded) return;
                 thread = result.Value != null && result.Value.Users.Count > 0 ? 
-                    new InstaDirectInboxThreadWrapper(result.Value, _instaApi) : new InstaDirectInboxThreadWrapper(placeholderThread.Users[0], _instaApi);
+                    new InstaDirectInboxThreadWrapper(result.Value, _instaApi) : new InstaDirectInboxThreadWrapper(placeholderThread.Users?[0], _instaApi);
             }
             else
             {
@@ -400,7 +441,7 @@ namespace Indirect
 
             if (thread.LastPermanentItem == null)
             {
-                thread.LastPermanentItem = new DirectItem() {Description = thread.Users[0].FullName};
+                thread.LastPermanentItem = new DirectItem() {Description = thread.Users?[0].FullName};
             }
 
             SelectedThread = thread;
@@ -408,14 +449,66 @@ namespace Indirect
 
         public async void MarkLatestItemSeen(InstaDirectInboxThreadWrapper thread)
         {
-            if (thread == null || string.IsNullOrEmpty(thread?.ThreadId)) return;
-            if (thread.LastSeenAt.TryGetValue(thread.ViewerId, out var lastSeen))
+            try
             {
-                if (string.IsNullOrEmpty(thread.LastPermanentItem?.ItemId) || 
-                    lastSeen.ItemId == thread.LastPermanentItem.ItemId ||
-                    thread.LastPermanentItem.FromMe) return;
-                await _instaApi.MarkItemSeenAsync(thread.ThreadId, thread.LastPermanentItem.ItemId);
+                if (thread == null || string.IsNullOrEmpty(thread.ThreadId)) return;
+                if (thread.LastSeenAt.TryGetValue(thread.ViewerId, out var lastSeen))
+                {
+                    if (string.IsNullOrEmpty(thread.LastPermanentItem?.ItemId) || 
+                        lastSeen.ItemId == thread.LastPermanentItem.ItemId ||
+                        thread.LastPermanentItem.FromMe) return;
+                    await _instaApi.MarkItemSeenAsync(thread.ThreadId, thread.LastPermanentItem.ItemId).ConfigureAwait(false);
+                }
             }
+            catch (Exception e)
+            {
+#if !DEBUG
+                Crashes.TrackError(e);
+#endif
+            }
+        }
+
+        public static IAsyncAction HandleException(string message = null, Exception e = null)
+        {
+            if (string.IsNullOrEmpty(message))
+            {
+                message = "An unexpected error has occured. Indirect doesn't know how to proceed next and may crash. " +
+                          "If this happens frequently, please submit an issue on Indirect's Github page.\n\n" +
+                          "https://github.com/huynhsontung/Indirect";
+            }
+
+            return CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.High, async () =>
+            {
+                try
+                {
+                    var dialog = new ContentDialog()
+                    {
+                        Title = "An error occured",
+                        Content = new ScrollViewer()
+                        {
+                            Content = new TextBlock()
+                            {
+                                Text = message,
+                                TextWrapping = TextWrapping.Wrap,
+                                IsTextSelectionEnabled = true
+                            },
+                            HorizontalScrollMode = ScrollMode.Disabled,
+                            VerticalScrollMode = ScrollMode.Auto,
+                            MaxWidth = 400
+                        },
+                        CloseButtonText = "Close",
+                        DefaultButton = ContentDialogButton.Close
+                    };
+                    await dialog.ShowAsync();
+                }
+                catch (Exception innerException)
+                {
+                    Debug.WriteLine(innerException);
+                }
+
+                // Intentionally crash the app
+                if (e != null) throw e;
+            });
         }
     }
 }

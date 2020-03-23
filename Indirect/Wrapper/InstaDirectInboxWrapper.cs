@@ -99,7 +99,10 @@ namespace Indirect.Wrapper
                     FirstUpdated?.Invoke(container.SeqId, container.SnapshotAt);
                 }
             }
-            else return new List<InstaDirectInboxThreadWrapper>(0);
+            else
+            {
+                return new List<InstaDirectInboxThreadWrapper>(0);
+            }
             UpdateExcludeThreads(container);
             return container.Inbox.Threads.Select(x => new InstaDirectInboxThreadWrapper(x, _instaApi));
         }
@@ -128,6 +131,19 @@ namespace Indirect.Wrapper
                 Threads.Insert(j, tmp);
                 i--;
                 satisfied = true;
+            }
+        }
+
+        public void FixThreadList()
+        {
+            // Somehow thread list got messed up and threads are not unique anymore
+            var duplicates = Threads.GroupBy(x => x.ThreadId).Where(g => g.Count() > 1)
+                .Select(y => y);
+            foreach (var duplicateGroup in duplicates)
+            {
+                var duplicate = duplicateGroup.First();
+                if (string.IsNullOrEmpty(duplicate.ThreadId)) continue;
+                Threads.Remove(duplicate);
             }
         }
     }

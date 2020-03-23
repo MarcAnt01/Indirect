@@ -11,17 +11,18 @@
     xmlns:wrappers="using:Indirect.Wrapper"
     mc:Ignorable="d"
     d:DesignHeight="300"
-    d:DesignWidth="400">
+    d:DesignWidth="400"
+    HorizontalAlignment="Stretch">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="FromThemItemBackground" Color="{StaticResource SystemBaseLowColor}"></SolidColorBrush>
+                    <SolidColorBrush x:Key="FromThemItemBackground" Color="#333333"></SolidColorBrush>
                     <SolidColorBrush x:Key="FromMeItemBackground" Color="{ThemeResource SystemAccentColorDark1}"></SolidColorBrush>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="FromThemItemBackground" Color="{StaticResource SystemBaseLowColor}"></SolidColorBrush>
-                    <SolidColorBrush x:Key="FromMeItemBackground" Color="{ThemeResource SystemAccentColorLight1}"></SolidColorBrush>
+                    <SolidColorBrush x:Key="FromThemItemBackground" Color="#e0e0e0"></SolidColorBrush>
+                    <SolidColorBrush x:Key="FromMeItemBackground" Color="{ThemeResource SystemAccentColorLight3}"></SolidColorBrush>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -49,7 +50,7 @@
             </converters:LikeUnlikeStyleConverter>
 
             <converters:NullVisibilityConverter x:Key="NullVisibilityConverter"/>
-            <converters:LinkPreviewVisibilityConverter x:Key="LinkPreviewVisibilityConverter"/>
+            <converters:BooleanVisibilityConverter x:Key="BooleanVisibilityConverter"/>
             <converters:FromMeBoolToGridColumnConverter x:Key="FromMeBoolToGridColumnConverter"/>
             <converters:ReactionsFromMeConverter x:Key="ReactionsFromMeConverter"
                                                  FromMe="{StaticResource FromMeReaction}"
@@ -65,6 +66,8 @@
                                                  AvailableStyle="{StaticResource AvailableOpen}"
                                                  NotAvailableStyle="{StaticResource NotAvailableOpen}"/>
             <converters:VariableMaxWidthConverter x:Key="VariableMaxWidthConverter"/>
+            <converters:ReelShareImageMarginConverter x:Key="ReelShareImageMarginConverter"/>
+            <converters:HumanizedDateTimeConverter x:Key="HumanizedDateTimeConverter"/>
 
 
             <Style x:Name="FromMeReaction" TargetType="FontIcon">
@@ -170,7 +173,7 @@
                         <HyperlinkButton Content="{x:Bind Text}" NavigateUri="{x:Bind NavigateUri}" Foreground="{StaticResource SystemControlForegroundBaseHighBrush}"/>
                     </Border>
 
-                    <Border x:Name="HyperlinkPreview" Visibility="{x:Bind IsNavigateUriValid, Converter={StaticResource LinkPreviewVisibilityConverter}}"
+                    <Border x:Name="HyperlinkPreview" Visibility="{x:Bind IsNavigateUriValid, Converter={StaticResource BooleanVisibilityConverter}}"
                             Background="Transparent" 
                             MaxWidth="250"
                             HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
@@ -278,7 +281,7 @@
                                Margin="0,0,0,2"/>
                     <controls:ImageEx Source="{x:Bind PreviewImageUri}"
                                       Visibility="{Binding RelativeSource={RelativeSource Self}, Path=Source, Converter={StaticResource NullVisibilityConverter}}"
-                                      MaxWidth="100" Height="200" Stretch="UniformToFill"
+                                      MaxWidth="100" Height="200" Stretch="UniformToFill" Margin="{x:Bind ReelShareMedia.Type, Converter={StaticResource ReelShareImageMarginConverter}}"
                                       HorizontalAlignment="{x:Bind FromMe, Converter={StaticResource FromMeAlignmentConverter}}"
                                       CornerRadius="2" Tapped="ReelShareImage_Tapped"/>
                     <Border x:Name="MessageContentWithBorder"
@@ -314,9 +317,23 @@
     </UserControl.Resources>
 
 
-    <StackPanel x:Name="ItemContainer" Orientation="Vertical" 
-                HorizontalAlignment="{x:Bind Item.FromMe, Mode=OneWay, Converter={StaticResource FromMeAlignmentConverter}}"
+    <StackPanel x:Name="ItemContainer" Orientation="Vertical"
+                HorizontalAlignment="Stretch"
                 Margin="0,2,0,2" DoubleTapped="ShowTimestamp">
+
+        <TextBlock HorizontalAlignment="Center" 
+                   Text="{x:Bind Item.Timestamp, Converter={StaticResource HumanizedDateTimeConverter}, Mode=OneWay}" 
+                   Visibility="{x:Bind Item.ShowTimestampHeader, Converter={StaticResource BooleanVisibilityConverter}, Mode=OneWay}" 
+                   Style="{ThemeResource FluentCaptionTextStyle}"
+                   Foreground="{StaticResource SystemControlForegroundBaseMediumBrush}"
+                   Margin="8,14,8,8"/>
+
+        <TextBlock HorizontalAlignment="{x:Bind Item.FromMe, Mode=OneWay, Converter={StaticResource FromMeAlignmentConverter}}" 
+                   Text="{x:Bind Item.Sender.Username, Mode=OneWay}" 
+                   Visibility="{x:Bind Item.ShowNameHeader, Converter={StaticResource BooleanVisibilityConverter}, Mode=OneWay}" 
+                   Style="{ThemeResource FluentCaptionTextStyle}"
+                   Foreground="{StaticResource SystemControlForegroundBaseLowBrush}"
+                   Margin="0,0,0,2"/>
 
         <ContentControl x:Name="MainContentControl" Content="{x:Bind Item, Mode=OneWay}" 
                         HorizontalAlignment="{x:Bind Item.FromMe, Mode=OneWay, Converter={StaticResource FromMeAlignmentConverter}}">
@@ -347,8 +364,8 @@
             </ContentControl.ContentTemplateSelector>
         </ContentControl>
 
-        <StackPanel x:Name="Reactions" Orientation="Horizontal" Margin="8,2,8,0"
-                    HorizontalAlignment="Left"
+        <StackPanel x:Name="Reactions" Orientation="Horizontal" Margin="10,2,10,0"
+                    HorizontalAlignment="{x:Bind Item.FromMe, Mode=OneWay, Converter={StaticResource FromMeAlignmentConverter}}"
                     Visibility="{x:Bind Item.Reactions.LikesCount, Mode=OneWay, Converter={StaticResource ReactionsVisibilityConverter}, FallbackValue=Collapsed}">
             <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" FontSize="12"
                     Style="{x:Bind Item.Reactions.MeLiked, Mode=OneWay, Converter={StaticResource ReactionsFromMeConverter}}"/>
